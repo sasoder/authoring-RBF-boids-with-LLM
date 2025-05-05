@@ -13,7 +13,7 @@ public class BoidManager : MonoBehaviour
         m_boids = new List<Boid>();
 
         //Get ALL the instances of the Flock class on the scene.
-        var flocks = GameObject.FindObjectsOfType<Flock>();
+        var flocks = GameObject.FindObjectsByType<Flock>(FindObjectsSortMode.None);
 
         foreach (var flock in flocks)
         {
