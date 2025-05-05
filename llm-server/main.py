@@ -86,36 +86,18 @@ async def transcribe_audio(audio_file: UploadFile = File(...)):
             logger.info(f"Removed temporary audio file: {temp_file_path}")
         await audio_file.close() # Ensure the file handle is closed
 
-# --- Generator function for streaming ---
-async def ollama_stream_generator(model_name: str, prompt: str):
-    """Yields chunks from the Ollama stream."""
-    try:
-        # ollama.generate returns a generator when stream=True
-        stream = ollama_client.generate(
-            model=model_name,
-            prompt=prompt,
-            stream=True
-        )
-        for chunk in stream:
-            if chunk and 'response' in chunk:
-                 # Yield only the response part of the chunk
-                 yield chunk['response']
-    except Exception as e:
-        logger.error(f"Error during Ollama streaming: {e}", exc_info=True)
-        # Handle potential errors during streaming if necessary,
-        # maybe yield an error message or log it.
-        yield f"Error streaming response: {str(e)}" # Or raise an exception handled by FastAPI
-
 @app.post("/generate")
 async def generate_text(request_data: GenerateRequest):
     logger.info(f"Received generation request with prompt: '{request_data.prompt[:50]}...' using configured model: {ollama_model_name}")
     try:
-        # Return a StreamingResponse, passing our async generator
-        return StreamingResponse(
-            ollama_stream_generator(ollama_model_name, request_data.prompt),
-            media_type="text/plain" # Send as plain text chunks
+        # Call ollama.generate synchronously and return the full response in a JSON object
+        response = ollama_client.generate(
+            model=ollama_model_name,
+            prompt=request_data.prompt
         )
+        # Extract only the text response from the Ollama dictionary
+        return {"response": response.get('response', '')}
     except Exception as e:
         # This top-level exception handler might catch setup errors before streaming starts
         logger.error(f"Error setting up Ollama generation stream: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Ollama generation setup failed: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Ollama generation setup failed: {str(e)}")

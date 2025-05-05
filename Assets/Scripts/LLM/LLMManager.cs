@@ -8,46 +8,6 @@ using System;
 using TMPro;
 using System.Text; // Needed for StringBuilder
 
-// --- Custom Download Handler for Streaming --- 
-public class StreamingDownloadHandler : DownloadHandlerScript
-{
-    private StringBuilder _stringBuilder = new StringBuilder();
-    public Action<string> OnChunkReceived; // Action to invoke when a chunk is received
-    public string Text => _stringBuilder.ToString(); // Property to get the accumulated text
-
-    public StreamingDownloadHandler() : base() { }
-    public StreamingDownloadHandler(byte[] buffer) : base(buffer) { }
-
-    // Required override, return true to keep receiving data
-    protected override bool ReceiveData(byte[] data, int dataLength)
-    {
-        if (data == null || dataLength == 0)
-        {
-            Debug.LogWarning("StreamingDownloadHandler :: Received no data.");
-            return false;
-        }
-
-        string chunk = System.Text.Encoding.UTF8.GetString(data, 0, dataLength);
-        _stringBuilder.Append(chunk);
-        //Debug.Log($"StreamingDownloadHandler :: Received chunk: {chunk}"); // Optional: Log each chunk
-        OnChunkReceived?.Invoke(chunk); // Invoke the action with the new chunk
-
-        return true; // Keep receiving data
-    }
-
-    // Optional: Called when all data is received
-    protected override void CompleteContent()
-    {
-        //Debug.Log("StreamingDownloadHandler :: CompleteContent called.");
-    }
-
-    // Optional: Return received data as text
-    protected override string GetText()
-    {
-        return Text;
-    }
-}
-
 public class LLMManager : MonoBehaviour
 {
     // --- Event for other scripts to listen to ---
@@ -116,10 +76,8 @@ public class LLMManager : MonoBehaviour
 
     void UpdateSendButtonState()
     {
-        // Send button is active if there's text OR a recording exists (and we're not currently recording)
         bool hasText = !string.IsNullOrWhiteSpace(promptInputField.text);
-        bool hasRecording = recordingClip != null;
-        sendButton.interactable = (hasText || hasRecording) && !isRecording;
+        sendButton.interactable = hasText && !isRecording;
     }
 
     void ToggleRecording()
@@ -136,8 +94,16 @@ public class LLMManager : MonoBehaviour
 
     void StartRecording()
     {
+        // --- Debugging Logs ---
+        Debug.Log($"StartRecording called. Current microphone device: {microphoneDevice}");
+        if (string.IsNullOrEmpty(microphoneDevice)) {
+            Debug.LogError("Microphone device name is null or empty!");
+            // Potentially add fallback logic or disable recording here
+        }
+
         if (Microphone.IsRecording(microphoneDevice))
         {
+            Debug.LogWarning($"Microphone '{microphoneDevice}' was already recording. Stopping it first.");
             Microphone.End(microphoneDevice); // Ensure it's stopped before starting
         }
 
@@ -145,15 +111,36 @@ public class LLMManager : MonoBehaviour
         promptInputField.text = "";
         if (recordingClip != null)
         {
+            Debug.Log("Destroying previous recording clip.");
             Destroy(recordingClip);
             recordingClip = null;
         }
 
+        Debug.Log($"Attempting Microphone.Start with device: '{microphoneDevice}', duration: {RECORD_DURATION_SECONDS}s, sample rate: {SAMPLE_RATE}Hz");
         recordingClip = Microphone.Start(microphoneDevice, false, RECORD_DURATION_SECONDS, SAMPLE_RATE);
+
+        // --- More Debugging ---
+        if (recordingClip == null)
+        {
+             Debug.LogError("Microphone.Start failed! Returned null AudioClip. Check microphone permissions and device name.");
+             isRecording = false; // Ensure state is correct
+             UpdateVoiceButtonText();
+             UpdateSendButtonState();
+             return; // Exit if failed
+        }
+        else
+        {
+            Debug.Log($"Microphone.Start succeeded. Clip length: {recordingClip.length}s, Channels: {recordingClip.channels}, Frequency: {recordingClip.frequency}");
+        }
+        // --- End Debugging Additions ---
+
+
         isRecording = true;
         UpdateVoiceButtonText();
         UpdateSendButtonState(); // Disable Send button while recording
-        Debug.Log("Recording started...");
+        Debug.Log("Recording state set to true.");
+        // Start the timeout coroutine
+        StartCoroutine(StopRecordingAfterTimeout());
     }
 
      IEnumerator StopRecordingAfterTimeout()
@@ -161,8 +148,8 @@ public class LLMManager : MonoBehaviour
          yield return new WaitForSeconds(RECORD_DURATION_SECONDS);
          if (isRecording)
          {
-             Debug.Log("Recording timeout reached.");
-             StopRecording();
+             Debug.Log("Recording timeout reached. Stopping and processing audio.");
+             StopRecording(); // This will now handle processing
          }
      }
 
@@ -175,11 +162,31 @@ public class LLMManager : MonoBehaviour
         UpdateVoiceButtonText();
         Debug.Log("Recording stopped.");
 
-        // Clip exists from Microphone.Start, just update state
-        if (recordingClip == null) {
-            Debug.LogError("Recording clip was null when stopping.");
+        if (recordingClip == null)
+        {
+            Debug.LogError("Recording clip was null when stopping. Cannot process audio.");
+            UpdateSendButtonState(); // Update UI state even if clip is null
+            return; // Exit early
         }
-        UpdateSendButtonState(); // Enable Send button now that recording is ready
+
+        // --- Automatically process the recorded audio ---
+        Debug.Log("Processing recorded audio clip...");
+        byte[] wavData = WavUtility.FromAudioClip(recordingClip);
+        if (wavData != null && wavData.Length > WavUtility.HEADER_SIZE) // Basic check for valid WAV data
+        {
+            StartCoroutine(SendAudioToServer(wavData));
+        }
+        else
+        {
+            Debug.LogError("Failed to convert AudioClip to valid WAV data or clip was empty.");
+        }
+
+        // Clean up the clip immediately after getting data
+        Destroy(recordingClip);
+        recordingClip = null;
+        // --- End automatic processing ---
+
+        UpdateSendButtonState(); // Update UI state after stopping and processing attempt
     }
 
     void ProcessSendClick()
@@ -193,35 +200,20 @@ public class LLMManager : MonoBehaviour
             Debug.Log("Sending text prompt via Send button.");
             StartCoroutine(SendPromptToServer(currentInputText));
             promptInputField.text = ""; // Clear text after sending
-            // Ensure clip is cleared (should be already by OnInputFieldValueChanged, but belt-and-suspenders)
+            // Ensure any lingering clip is cleared if text is sent manually
              if (recordingClip != null)
              {
                  Destroy(recordingClip);
                  recordingClip = null;
+                 Debug.Log("Cleared unused recording clip when sending text.");
              }
-        }
-        else if (recordingClip != null)
-        {
-            Debug.Log("Sending recorded audio via Send button.");
-            byte[] wavData = WavUtility.FromAudioClip(recordingClip);
-            if (wavData != null)
-            {
-                StartCoroutine(SendAudioToServer(wavData));
-            }
-            else
-            {
-                Debug.LogError("Failed to convert AudioClip to WAV for sending.");
-            }
-            // Clear the clip after attempting to send
-            Destroy(recordingClip);
-            recordingClip = null;
         }
         else
         {
-            Debug.LogWarning("Send button clicked but no input available.");
+            Debug.LogWarning("Send button clicked but text input is empty. No action taken.");
         }
 
-        UpdateSendButtonState(); // Disable send button after processing
+        UpdateSendButtonState(); // Update button state after processing
     }
 
     // --- Server Communication Coroutines ---
@@ -291,20 +283,8 @@ public class LLMManager : MonoBehaviour
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.uploadHandler.contentType = "application/json";
 
-        // --- Use the custom Streaming Download Handler --- 
-        StreamingDownloadHandler streamingHandler = new StreamingDownloadHandler();
-        StringBuilder fullResponseBuilder = new StringBuilder();
-
-        streamingHandler.OnChunkReceived = (chunk) => {
-            // Append chunk to the builder
-            fullResponseBuilder.Append(chunk);
-            // OPTIONAL: If you want real-time updates, you could invoke an event here 
-            // with the latest fullResponseBuilder.ToString(). 
-            // For now, we'll just build the full response.
-            // Example: OnLLMResponseChunkReceived?.Invoke(fullResponseBuilder.ToString());
-            Debug.Log($"Chunk Received: {chunk}"); // Log received chunks
-        };
-        request.downloadHandler = streamingHandler; // Assign the custom handler
+        // --- Use the custom Streaming Download Handler ---
+        request.downloadHandler = new DownloadHandlerBuffer(); // Assign the custom handler
 
         Debug.Log($"Sending JSON prompt '{prompt}' to {url} for streaming response.");
 
@@ -313,25 +293,39 @@ public class LLMManager : MonoBehaviour
         if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
         {
             Debug.LogError($"Error sending prompt / receiving stream: {request.error} Response Code: {request.responseCode}");
-            // Even with streaming, errors might occur during the connection or after some chunks.
         }
         else
         {
-            // --- Process the fully accumulated response --- 
-            string fullResponse = fullResponseBuilder.ToString();
-            Debug.Log($"Full Streamed LLM Response: {fullResponse}");
+            // --- Process the fully accumulated JSON response ---
+            string jsonResponse = request.downloadHandler.text;
+            Debug.Log($"Full LLM JSON Response: {jsonResponse}"); // Log the raw JSON
 
-            if (!string.IsNullOrEmpty(fullResponse))
+            if (!string.IsNullOrEmpty(jsonResponse))
             {
-                // Invoke the event with the complete response received via streaming
-                OnLLMResponseReceived?.Invoke(fullResponse); 
+                try
+                {
+                    LLMResponse llmResponse = JsonUtility.FromJson<LLMResponse>(jsonResponse);
+                    if (llmResponse != null && !string.IsNullOrEmpty(llmResponse.response))
+                    {
+                        // Invoke the event with the extracted response string
+                        OnLLMResponseReceived?.Invoke(llmResponse.response);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Failed to parse LLM response or response field was empty. JSON: {jsonResponse}");
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error parsing LLM JSON response: {e.Message} JSON: {jsonResponse}");
+                }
             }
             else
             {
-                Debug.LogWarning("Received empty response from stream.");
+                Debug.LogWarning("Received empty response from server.");
             }
         }
-        request.Dispose(); // Dispose of the request object
+        request.Dispose();
     }
 
     // --- Helper Classes for JSON Parsing ---
@@ -348,21 +342,20 @@ public class LLMManager : MonoBehaviour
         public string prompt;
     }
 
+    // --- Add this for the LLM response ---
     [System.Serializable]
-    private class OllamaResponse
+    private class LLMResponse
     {
-        // Field name must match the JSON key from the FastAPI server
+         // Field name must match the JSON key from the FastAPI server
         public string response;
     }
 }
 
 // --- WavUtility ---
 // Helper class to convert AudioClip to WAV byte array
-// Source: Often found online, e.g., https://gist.github.com/darktable/2317063
-// (Ensure you have rights to use or implement your own)
 public static class WavUtility
 {
-    const int HEADER_SIZE = 44;
+    public const int HEADER_SIZE = 44;
 
     public static byte[] FromAudioClip(AudioClip clip)
     {
