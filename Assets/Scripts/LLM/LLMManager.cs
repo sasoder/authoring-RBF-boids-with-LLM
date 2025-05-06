@@ -6,7 +6,7 @@ using System.IO;
 using UnityEngine.Networking;
 using System;
 using TMPro;
-using System.Text; // Needed for StringBuilder
+using System.Text;
 
 public class LLMManager : MonoBehaviour
 {
@@ -14,22 +14,21 @@ public class LLMManager : MonoBehaviour
     public static event Action<string> OnLLMResponseReceived;
 
     // --- UI Elements ---
-    // Assign these in the Unity Inspector
     public TMP_InputField promptInputField;
-    public Button voiceButton; // Keep name, but Inspector label should be "Record/Stop Button"
-    public Button sendButton; // Assign the "Send" button here
-    public TextMeshProUGUI voiceButtonText; // Keep name, but Inspector label should be "Record Button Text"
+    public Button voiceButton;
+    public Button sendButton;
+    public TextMeshProUGUI voiceButtonText;
 
     // --- Microphone Settings ---
-    private const int RECORD_DURATION_SECONDS = 10; // Max recording duration
-    private const int SAMPLE_RATE = 16000; // Sample rate Whisper prefers
+    private const int RECORD_DURATION_SECONDS = 20;
+    private const int SAMPLE_RATE = 16000;
     private AudioClip recordingClip;
     private string microphoneDevice;
     private bool isRecording = false;
 
     // --- Server Settings ---
-    private const string SERVER_URL = "http://localhost:8000"; // FastAPI server URL (adjust port if needed)
-    private const string LLM_ENDPOINT = "/generate"; // Changed from /llm
+    private const string SERVER_URL = "http://localhost:8000";
+    private const string LLM_ENDPOINT = "/generate";
     private const string TRANSCRIBE_ENDPOINT = "/transcribe";
 
     void Start()
@@ -42,16 +41,15 @@ public class LLMManager : MonoBehaviour
         else
         {
             microphoneDevice = Microphone.devices[0]; // Use the default microphone
-            Debug.Log($"Using microphone: {microphoneDevice}");
         }
 
         // Add listeners for UI elements
         promptInputField.onValueChanged.AddListener(OnInputFieldValueChanged);
         promptInputField.onSubmit.AddListener((_) => ProcessSendClick()); // Allow Enter key to send
-        voiceButton.onClick.AddListener(ToggleRecording); // This button now just Records/Stops
+        voiceButton.onClick.AddListener(ToggleRecording); // This button just Records/Stops
         sendButton.onClick.AddListener(ProcessSendClick); // The main send action
         UpdateVoiceButtonText();
-        UpdateSendButtonState(); // Initial state
+        UpdateSendButtonState();
     }
 
     void UpdateVoiceButtonText()
@@ -68,7 +66,6 @@ public class LLMManager : MonoBehaviour
             {
                 Destroy(recordingClip);
                 recordingClip = null;
-                Debug.Log("Cleared recorded audio due to text input.");
             }
         }
         UpdateSendButtonState();
@@ -94,8 +91,6 @@ public class LLMManager : MonoBehaviour
 
     void StartRecording()
     {
-        // --- Debugging Logs ---
-        Debug.Log($"StartRecording called. Current microphone device: {microphoneDevice}");
         if (string.IsNullOrEmpty(microphoneDevice)) {
             Debug.LogError("Microphone device name is null or empty!");
             // Potentially add fallback logic or disable recording here
@@ -111,12 +106,10 @@ public class LLMManager : MonoBehaviour
         promptInputField.text = "";
         if (recordingClip != null)
         {
-            Debug.Log("Destroying previous recording clip.");
             Destroy(recordingClip);
             recordingClip = null;
         }
 
-        Debug.Log($"Attempting Microphone.Start with device: '{microphoneDevice}', duration: {RECORD_DURATION_SECONDS}s, sample rate: {SAMPLE_RATE}Hz");
         recordingClip = Microphone.Start(microphoneDevice, false, RECORD_DURATION_SECONDS, SAMPLE_RATE);
 
         // --- More Debugging ---
@@ -128,17 +121,12 @@ public class LLMManager : MonoBehaviour
              UpdateSendButtonState();
              return; // Exit if failed
         }
-        else
-        {
-            Debug.Log($"Microphone.Start succeeded. Clip length: {recordingClip.length}s, Channels: {recordingClip.channels}, Frequency: {recordingClip.frequency}");
-        }
         // --- End Debugging Additions ---
 
 
         isRecording = true;
         UpdateVoiceButtonText();
         UpdateSendButtonState(); // Disable Send button while recording
-        Debug.Log("Recording state set to true.");
         // Start the timeout coroutine
         StartCoroutine(StopRecordingAfterTimeout());
     }
@@ -148,7 +136,6 @@ public class LLMManager : MonoBehaviour
          yield return new WaitForSeconds(RECORD_DURATION_SECONDS);
          if (isRecording)
          {
-             Debug.Log("Recording timeout reached. Stopping and processing audio.");
              StopRecording(); // This will now handle processing
          }
      }
@@ -160,7 +147,6 @@ public class LLMManager : MonoBehaviour
         Microphone.End(microphoneDevice);
         isRecording = false;
         UpdateVoiceButtonText();
-        Debug.Log("Recording stopped.");
 
         if (recordingClip == null)
         {
@@ -170,7 +156,6 @@ public class LLMManager : MonoBehaviour
         }
 
         // --- Automatically process the recorded audio ---
-        Debug.Log("Processing recorded audio clip...");
         byte[] wavData = WavUtility.FromAudioClip(recordingClip);
         if (wavData != null && wavData.Length > WavUtility.HEADER_SIZE) // Basic check for valid WAV data
         {
@@ -186,7 +171,7 @@ public class LLMManager : MonoBehaviour
         recordingClip = null;
         // --- End automatic processing ---
 
-        UpdateSendButtonState(); // Update UI state after stopping and processing attempt
+        UpdateSendButtonState();
     }
 
     void ProcessSendClick()
@@ -197,7 +182,6 @@ public class LLMManager : MonoBehaviour
 
         if (!string.IsNullOrWhiteSpace(currentInputText))
         {
-            Debug.Log("Sending text prompt via Send button.");
             StartCoroutine(SendPromptToServer(currentInputText));
             promptInputField.text = ""; // Clear text after sending
             // Ensure any lingering clip is cleared if text is sent manually
@@ -205,7 +189,6 @@ public class LLMManager : MonoBehaviour
              {
                  Destroy(recordingClip);
                  recordingClip = null;
-                 Debug.Log("Cleared unused recording clip when sending text.");
              }
         }
         else
@@ -231,8 +214,6 @@ public class LLMManager : MonoBehaviour
         // No need to set ContentType manually for multipart, Unity handles it.
         request.downloadHandler = new DownloadHandlerBuffer(); // Ensure we get response body
 
-        Debug.Log($"Sending audio data ({audioData.Length} bytes) via multipart form to {url}");
-
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
@@ -242,14 +223,12 @@ public class LLMManager : MonoBehaviour
         else
         {
             string jsonResponse = request.downloadHandler.text;
-            Debug.Log($"Raw Transcription response: {jsonResponse}");
             try
             {
                 // Expecting server returns JSON like {"transcript": "..."}
                 TranscriptionResponse transcription = JsonUtility.FromJson<TranscriptionResponse>(jsonResponse);
                 if (transcription != null && !string.IsNullOrWhiteSpace(transcription.transcript))
                 {
-                    Debug.Log($"Parsed Transcript: {transcription.transcript}");
                     StartCoroutine(SendPromptToServer(transcription.transcript)); // Send transcript to LLM
                 }
                 else
@@ -286,7 +265,6 @@ public class LLMManager : MonoBehaviour
         // --- Use the custom Streaming Download Handler ---
         request.downloadHandler = new DownloadHandlerBuffer(); // Assign the custom handler
 
-        Debug.Log($"Sending JSON prompt '{prompt}' to {url} for streaming response.");
 
         yield return request.SendWebRequest();
 
@@ -298,7 +276,6 @@ public class LLMManager : MonoBehaviour
         {
             // --- Process the fully accumulated JSON response ---
             string jsonResponse = request.downloadHandler.text;
-            Debug.Log($"Full LLM JSON Response: {jsonResponse}"); // Log the raw JSON
 
             if (!string.IsNullOrEmpty(jsonResponse))
             {
