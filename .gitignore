@@ -84,3 +84,14 @@ crashlytics-build.properties
 
 # Directories potentially created on remote AFP share
 .AppleDouble
+
+# Python & FastAPI
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+/llm-server/.venv/
+/llm-server/__pycache__/
+/llm-server/.env
