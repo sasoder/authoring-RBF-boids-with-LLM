@@ -43,7 +43,7 @@ public class BoidUIManager : MonoBehaviour
     {
         if (targetFlock == null)
         {
-            targetFlock = FindObjectOfType<Flock>();
+            targetFlock = FindFirstObjectByType<Flock>();
             if (targetFlock == null)
             {
                 Debug.LogError("No Flock found in scene!");
