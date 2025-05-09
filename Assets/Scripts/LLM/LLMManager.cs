@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 using System;
 using TMPro;
 using System.Text;
+using p_bois_steering_behaviors.Scripts;
 
 public class LLMManager : MonoBehaviour
 {
@@ -202,8 +203,6 @@ public class LLMManager : MonoBehaviour
         LLMGenerateRequestPayload payload = new LLMGenerateRequestPayload
         {
             prompt = promptText,
-            
-            // TODO: populate these with a scene graph representation of the current scene, currently just using a placeholder
             flock_position = new LLMCoordinate { x = 0, y = 0, z = 0 },
             scene_graph = new LLMSceneGraph
             {
@@ -218,7 +217,7 @@ public class LLMManager : MonoBehaviour
                     new LLMGameObject { name = "Tower", origin = new LLMCoordinate { x = 5, y = 0, z = 5 }, bounds = null }
                 }
             },
-            available_styles = new List<string> { "calm", "aggressive", "exploratory" } // TODO: populate with actual styles from the scene (scriptable objects @marcus)
+            available_styles = BoidUIManager.AvailableStyles
         };
         return payload;
     }

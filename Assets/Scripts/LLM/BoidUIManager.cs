@@ -1,11 +1,27 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class BoidUIManager : MonoBehaviour
 {
+    public static readonly List<string> AvailableStyles = new List<string>
+    {
+        "calm",
+        "aggressive",
+        "exploratory",
+        "formation",
+        "social",
+        "independent",
+        "chaotic"
+    };
+
     [Header("References")]
     [SerializeField] private Flock targetFlock;
+
+    [Header("Behavior Selection")]
+    [SerializeField] private TMP_Dropdown behaviorDropdown;
+    [SerializeField] private TextMeshProUGUI behaviorLabel;
 
     [Header("Cohesion Controls")]
     [SerializeField] private Slider cohesionForceSlider;
@@ -51,9 +67,29 @@ public class BoidUIManager : MonoBehaviour
             }
         }
 
+        InitializeBehaviorDropdown();
         InitializeSliders();
         InitializeToggles();
         UpdateUIValues();
+    }
+
+    private void InitializeBehaviorDropdown()
+    {
+        if (behaviorDropdown != null)
+        {
+            // Clear existing options
+            behaviorDropdown.ClearOptions();
+
+            // Add all available styles as options
+            behaviorDropdown.AddOptions(AvailableStyles);
+
+            // Add listener for when the dropdown value changes
+            behaviorDropdown.onValueChanged.AddListener(OnBehaviorSelected);
+
+            // Set initial value
+            behaviorDropdown.value = 0;
+            OnBehaviorSelected(0);
+        }
     }
 
     private void InitializeSliders()
@@ -227,5 +263,46 @@ public class BoidUIManager : MonoBehaviour
     private void OnVectorFieldToggled(bool value)
     {
         targetFlock.hasVectorField = value;
+    }
+
+    private void OnBehaviorSelected(int index)
+    {
+        if (index < 0 || index >= AvailableStyles.Count) return;
+
+        string selectedStyle = AvailableStyles[index];
+        BoidStylePreset preset = BoidStylePresets.GetPreset(selectedStyle);
+
+        // Update all sliders to match the preset
+        if (cohesionForceSlider != null) cohesionForceSlider.value = preset.cohesionForceFactor;
+        if (cohesionRadiusSlider != null) cohesionRadiusSlider.value = preset.cohesionRadius;
+        if (separationForceSlider != null) separationForceSlider.value = preset.separationForceFactor;
+        if (separationRadiusSlider != null) separationRadiusSlider.value = preset.separationRadius;
+        if (alignmentForceSlider != null) alignmentForceSlider.value = preset.alignmentForceFactor;
+        if (alignmentRadiusSlider != null) alignmentRadiusSlider.value = preset.alignmentRadius;
+        if (maxSpeedSlider != null) maxSpeedSlider.value = preset.maxSpeed;
+        if (minSpeedSlider != null) minSpeedSlider.value = preset.minSpeed;
+        if (dragSlider != null) dragSlider.value = preset.drag;
+
+        // Update toggles
+        if (flowToggle != null) flowToggle.isOn = preset.hasFlow;
+        if (vectorFieldToggle != null) vectorFieldToggle.isOn = preset.hasVectorField;
+
+        // Update the flock with the new values
+        UpdateFlockWithPreset(preset);
+    }
+
+    private void UpdateFlockWithPreset(BoidStylePreset preset)
+    {
+        targetFlock.CohesionForceFactor = preset.cohesionForceFactor;
+        targetFlock.CohesionRadius = preset.cohesionRadius;
+        targetFlock.SeparationForceFactor = preset.separationForceFactor;
+        targetFlock.SeparationRadius = preset.separationRadius;
+        targetFlock.AlignmentForceFactor = preset.alignmentForceFactor;
+        targetFlock.AlignmentRadius = preset.alignmentRadius;
+        targetFlock.MaxSpeed = preset.maxSpeed;
+        targetFlock.MinSpeed = preset.minSpeed;
+        targetFlock.Drag = preset.drag;
+        targetFlock.hasFlow = preset.hasFlow;
+        targetFlock.hasVectorField = preset.hasVectorField;
     }
 } 
