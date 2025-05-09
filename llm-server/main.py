@@ -1,23 +1,18 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from faster_whisper import WhisperModel
-import ollama
 import os
 import logging
 import asyncio
 from dotenv import load_dotenv
 from pydantic import BaseModel
-
+from api.generate import router as generate_router
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-
-# --- Pydantic Models ---
-class GenerateRequest(BaseModel):
-    prompt: str
 
 # Downloads model on first run if not found.
 model_size = os.getenv("WHISPER_MODEL", "base.en")
@@ -34,12 +29,8 @@ except Exception as e:
     # For now, we'll let FastAPI start but transcription will fail.
     whisper_model = None
 
-# default ollama server runs at http://localhost:11434
-# adjust OLLAMA_HOST env var if it's elsewhere
-ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-logger.info(f"Configuring Ollama client for host: {ollama_host}")
-ollama_model_name = os.getenv("OLLAMA_MODEL", "llama3")
-ollama_client = ollama.Client(host=ollama_host)
+
+app.include_router(generate_router)
 
 @app.get("/")
 async def read_root():
@@ -85,19 +76,3 @@ async def transcribe_audio(audio_file: UploadFile = File(...)):
             os.remove(temp_file_path)
             logger.info(f"Removed temporary audio file: {temp_file_path}")
         await audio_file.close() # Ensure the file handle is closed
-
-@app.post("/generate")
-async def generate_text(request_data: GenerateRequest):
-    logger.info(f"Received generation request with prompt: '{request_data.prompt[:50]}...' using configured model: {ollama_model_name}")
-    try:
-        # Call ollama.generate synchronously and return the full response in a JSON object
-        response = ollama_client.generate(
-            model=ollama_model_name,
-            prompt=request_data.prompt
-        )
-        # Extract only the text response from the Ollama dictionary
-        return {"response": response.get('response', '')}
-    except Exception as e:
-        # This top-level exception handler might catch setup errors before streaming starts
-        logger.error(f"Error setting up Ollama generation stream: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Ollama generation setup failed: {str(e)}")

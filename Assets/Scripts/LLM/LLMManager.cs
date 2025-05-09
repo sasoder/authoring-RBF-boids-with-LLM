@@ -11,7 +11,7 @@ using System.Text;
 public class LLMManager : MonoBehaviour
 {
     // --- Event for other scripts to listen to ---
-    public static event Action<string> OnLLMResponseReceived;
+    public static event Action<LLMGenerationOutput> OnLLMResponseReceived;
 
     // --- UI Elements ---
     public TMP_InputField promptInputField;
@@ -93,13 +93,12 @@ public class LLMManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(microphoneDevice)) {
             Debug.LogError("Microphone device name is null or empty!");
-            // Potentially add fallback logic or disable recording here
         }
 
         if (Microphone.IsRecording(microphoneDevice))
         {
             Debug.LogWarning($"Microphone '{microphoneDevice}' was already recording. Stopping it first.");
-            Microphone.End(microphoneDevice); // Ensure it's stopped before starting
+            Microphone.End(microphoneDevice);
         }
 
         // Clear text field and any old clip when starting recording
@@ -182,24 +181,47 @@ public class LLMManager : MonoBehaviour
 
         if (!string.IsNullOrWhiteSpace(currentInputText))
         {
-            StartCoroutine(SendPromptToServer(currentInputText));
+            LLMGenerateRequestPayload payload = CreatePayloadFromPrompt(currentInputText);
+            StartCoroutine(SendPromptToServer(payload));
             promptInputField.text = ""; // Clear text after sending
-            // Ensure any lingering clip is cleared if text is sent manually
-             if (recordingClip != null)
-             {
-                 Destroy(recordingClip);
-                 recordingClip = null;
-             }
+            if (recordingClip != null)
+            {
+                Destroy(recordingClip);
+                recordingClip = null;
+            }
         }
         else
         {
             Debug.LogWarning("Send button clicked but text input is empty. No action taken.");
         }
-
-        UpdateSendButtonState(); // Update button state after processing
+        UpdateSendButtonState();
     }
 
-    // --- Server Communication Coroutines ---
+    LLMGenerateRequestPayload CreatePayloadFromPrompt(string promptText)
+    {
+        LLMGenerateRequestPayload payload = new LLMGenerateRequestPayload
+        {
+            prompt = promptText,
+            
+            // TODO: populate these with a scene graph representation of the current scene, currently just using a placeholder
+            flock_position = new LLMCoordinate { x = 0, y = 0, z = 0 },
+            scene_graph = new LLMSceneGraph
+            {
+                world_bounds = new LLMBoundsType 
+                {
+                    min = new LLMVector { s = new LLMCoordinate { x = -10, y = -10, z = -10 }, e = new LLMCoordinate { x = -10, y = -10, z = -10 } }, 
+                    max = new LLMVector { s = new LLMCoordinate { x = 10, y = 10, z = 10 }, e = new LLMCoordinate { x = 10, y = 10, z = 10 } }  
+                },
+                game_objects = new List<LLMGameObject>
+                {
+                    // example object
+                    new LLMGameObject { name = "Tower", origin = new LLMCoordinate { x = 5, y = 0, z = 5 }, bounds = null }
+                }
+            },
+            available_styles = new List<string> { "calm", "aggressive", "exploratory" } // TODO: populate with actual styles from the scene (scriptable objects @marcus)
+        };
+        return payload;
+    }
 
     IEnumerator SendAudioToServer(byte[] audioData)
     {
@@ -211,8 +233,7 @@ public class LLMManager : MonoBehaviour
         formData.Add(new MultipartFormFileSection("audio_file", audioData, "recording.wav", "audio/wav"));
 
         UnityWebRequest request = UnityWebRequest.Post(url, formData);
-        // No need to set ContentType manually for multipart, Unity handles it.
-        request.downloadHandler = new DownloadHandlerBuffer(); // Ensure we get response body
+        request.downloadHandler = new DownloadHandlerBuffer();
 
         yield return request.SendWebRequest();
 
@@ -225,71 +246,58 @@ public class LLMManager : MonoBehaviour
             string jsonResponse = request.downloadHandler.text;
             try
             {
-                // Expecting server returns JSON like {"transcript": "..."}
                 TranscriptionResponse transcription = JsonUtility.FromJson<TranscriptionResponse>(jsonResponse);
                 if (transcription != null && !string.IsNullOrWhiteSpace(transcription.transcript))
                 {
-                    StartCoroutine(SendPromptToServer(transcription.transcript)); // Send transcript to LLM
+                    // --- Prepare and send the full request payload for /generate ---
+                    LLMGenerateRequestPayload payload = CreatePayloadFromPrompt(transcription.transcript);
+                    StartCoroutine(SendPromptToServer(payload)); // Send transcript to LLM as part of full payload
                 }
                 else
                 {
                     Debug.LogWarning("Received empty or invalid transcription response.");
                 }
-
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"Failed to parse transcription response: {e.Message} Response: {jsonResponse}");
             }
         }
-         request.Dispose(); // Dispose of the request object
+        request.Dispose();
     }
 
-
-    IEnumerator SendPromptToServer(string prompt)
+    IEnumerator SendPromptToServer(LLMGenerateRequestPayload payload)
     {
         string url = SERVER_URL + LLM_ENDPOINT;
-
-        // --- Prepare JSON body for /generate endpoint (only prompt) ---
-        LLMPrompt llmPrompt = new LLMPrompt
-        {
-            prompt = prompt
-        };
-        string jsonBody = JsonUtility.ToJson(llmPrompt);
+        string jsonBody = JsonUtility.ToJson(payload);
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
 
         UnityWebRequest request = new UnityWebRequest(url, "POST");
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.uploadHandler.contentType = "application/json";
-
-        // --- Use the custom Streaming Download Handler ---
-        request.downloadHandler = new DownloadHandlerBuffer(); // Assign the custom handler
-
+        request.downloadHandler = new DownloadHandlerBuffer();
 
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
         {
-            Debug.LogError($"Error sending prompt / receiving stream: {request.error} Response Code: {request.responseCode}");
+            Debug.LogError($"Error sending prompt / receiving stream: {request.error} Response Code: {request.responseCode} Body: {request.downloadHandler.text}");
         }
         else
         {
-            // --- Process the fully accumulated JSON response ---
             string jsonResponse = request.downloadHandler.text;
-
             if (!string.IsNullOrEmpty(jsonResponse))
             {
                 try
                 {
-                    LLMResponse llmResponse = JsonUtility.FromJson<LLMResponse>(jsonResponse);
-                    if (llmResponse != null && !string.IsNullOrEmpty(llmResponse.response))
+                    LLMGenerationOutput llmOutput = JsonUtility.FromJson<LLMGenerationOutput>(jsonResponse);
+                    if (llmOutput != null && llmOutput.vectors != null)
                     {
-                        // Invoke the event with the extracted response string
-                        OnLLMResponseReceived?.Invoke(llmResponse.response);
+                        OnLLMResponseReceived?.Invoke(llmOutput);
                     }
                     else
                     {
-                        Debug.LogWarning($"Failed to parse LLM response or response field was empty. JSON: {jsonResponse}");
+                        Debug.LogWarning($"Failed to parse LLM response or output was incomplete. JSON: {jsonResponse}");
                     }
                 }
                 catch (System.Exception e)
@@ -305,26 +313,11 @@ public class LLMManager : MonoBehaviour
         request.Dispose();
     }
 
-    // --- Helper Classes for JSON Parsing ---
+    // --- Helper Class for JSON Parsing (Transcription) ---
     [System.Serializable]
-    private class TranscriptionResponse
+    private class TranscriptionResponse // This class is fine as it's for a different endpoint
     {
-        // Field name must match the JSON key from the FastAPI server
         public string transcript;
-    }
-
-    [System.Serializable]
-    private class LLMPrompt
-    {
-        public string prompt;
-    }
-
-    // --- Add this for the LLM response ---
-    [System.Serializable]
-    private class LLMResponse
-    {
-         // Field name must match the JSON key from the FastAPI server
-        public string response;
     }
 }
 

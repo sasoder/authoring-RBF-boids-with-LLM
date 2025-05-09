@@ -4,7 +4,6 @@ using TMPro;
 
 public class LLMResponseListener : MonoBehaviour
 {
-    // Assign this in the Inspector to the TextMeshPro object you want to update
     public TextMeshProUGUI debugTextOutput;
 
     // reference to BoidManager if needed to pass data
@@ -24,20 +23,19 @@ public class LLMResponseListener : MonoBehaviour
         Debug.Log("LLMResponseListener unsubscribed.");
     }
 
-    void HandleLLMResponse(string response)
+    void HandleLLMResponse(LLMGenerationOutput response)
     {
         Debug.Log($"LLMResponseListener received: {response}");
 
         // Update the assigned TextMeshPro component
         if (debugTextOutput != null)
         {
-            debugTextOutput.text = response;
+            debugTextOutput.text = response.style;
         }
 
-        // --- TODO: Use the response string here ---
-        // For example, parse the response and tell BoidManager what to do
+        // something like this @marcus
         // if (boidManager != null) {
-        //    boidManager.ProcessLLMCommand(response); // Hypothetical method
+        //    boidManager.ProcessLLMCommand(response); 
         // }
     }
 }
