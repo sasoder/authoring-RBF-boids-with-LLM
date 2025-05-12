@@ -13,6 +13,7 @@ public class LLMVector
 {
     public LLMCoordinate s;
     public LLMCoordinate e;
+
 }
 
 [System.Serializable]
@@ -20,6 +21,13 @@ public class LLMBoundsType
 {
     public LLMVector min;
     public LLMVector max;
+}
+
+[System.Serializable]
+public class LLMWorldBoundsType
+{
+    public LLMCoordinate min;
+    public LLMCoordinate max;
 }
 
 [System.Serializable]
@@ -33,7 +41,7 @@ public class LLMGameObject
 [System.Serializable]
 public class LLMSceneGraph
 {
-    public LLMBoundsType world_bounds;
+    public LLMWorldBoundsType world_bounds;
     public List<LLMGameObject> game_objects;
 }
 

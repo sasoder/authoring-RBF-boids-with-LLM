@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using TMPro;
 using p_bois_steering_behaviors.Scripts;
+using System.Collections.Generic;
 
 [System.Serializable]
 public class BoidStylePreset
@@ -155,11 +156,9 @@ public static class BoidStylePresets
 public class LLMResponseListener : MonoBehaviour
 {
     public TextMeshProUGUI debugTextOutput;
-    public Flock targetFlock;
-
     // reference to BoidManager if needed to pass data
     // public BoidManager boidManager;
-
+    
     void OnEnable()
     {
         // subscribe to the event when this component is enabled
@@ -176,7 +175,10 @@ public class LLMResponseListener : MonoBehaviour
 
     void HandleLLMResponse(LLMGenerationOutput response)
     {
-        Debug.Log($"LLMResponseListener received: {response}");
+        // Log the full response
+        // Debug.Log($"Received LLM Response:");
+        // Debug.Log($"Style: {response.style}");
+        // Debug.Log($"Number of vectors: {response.vectors?.Count ?? 0}");
 
         // Update the assigned TextMeshPro component
         if (debugTextOutput != null)
@@ -184,39 +186,37 @@ public class LLMResponseListener : MonoBehaviour
             debugTextOutput.text = response.style;
         }
 
-        // Apply the style preset to the flock
-        if (targetFlock != null)
-        {
-            ApplyStylePreset(response.style);
-        }
-        else
-        {
-            Debug.LogWarning("No target flock assigned to LLMResponseListener!");
-        }
+        // Apply the style preset using BoidUIManager
+        ApplyStylePreset(response.style);
 
-        // something like this @marcus
-        // if (boidManager != null) {
-        //    boidManager.ProcessLLMCommand(response); 
-        // }
+        // Handle vector replacement
+        if (response.vectors != null && response.vectors.Count > 0)
+        {
+            SourceVectorContainer container = FindObjectOfType<SourceVectorContainer>();
+            if (container != null)
+            {
+                container.ReplaceSourceVectors(response.vectors);
+                Debug.Log($"Replaced source vectors with {response.vectors.Count} new vectors");
+            }
+            else
+            {
+                Debug.LogError("Could not find SourceVectorContainer in scene");
+            }
+        }
     }
 
     void ApplyStylePreset(string styleName)
     {
-        BoidStylePreset preset = BoidStylePresets.GetPreset(styleName);
-        
-        // Apply all parameters from the preset to the flock
-        targetFlock.CohesionForceFactor = preset.cohesionForceFactor;
-        targetFlock.CohesionRadius = preset.cohesionRadius;
-        targetFlock.SeparationForceFactor = preset.separationForceFactor;
-        targetFlock.SeparationRadius = preset.separationRadius;
-        targetFlock.AlignmentForceFactor = preset.alignmentForceFactor;
-        targetFlock.AlignmentRadius = preset.alignmentRadius;
-        targetFlock.MaxSpeed = preset.maxSpeed;
-        targetFlock.MinSpeed = preset.minSpeed;
-        targetFlock.Drag = preset.drag;
-        targetFlock.hasFlow = preset.hasFlow;
-        targetFlock.hasVectorField = preset.hasVectorField;
-
-        Debug.Log($"Applied {styleName} preset to flock");
+        // Find and update UI elements
+        BoidUIManager uiManager = FindObjectOfType<BoidUIManager>();
+        if (uiManager != null)
+        {
+            uiManager.ApplyStyleByName(styleName);
+            Debug.Log($"Applied {styleName} preset to flock and UI");
+        }
+        else
+        {
+            Debug.LogWarning("No BoidUIManager found in scene!");
+        }
     }
 }
