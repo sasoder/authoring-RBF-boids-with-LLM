@@ -21,41 +21,50 @@ def construct_prompt(request: GenerateRequest) -> str:
 
     {available_styles_str}
 
-    The response should be a JSON object with the following fields:
-    - style: Based on the user's prompt, choose the best behavioral style from the available styles.
+    The response must be a JSON object with the following fields:
+    - style: Based on the user's prompt, choose the best behavioral style from the available styles. The style must be one of the available styles.
     - vectors: A list of directed line segments (vectors). Each segment is defined by a start coordinate `s` and an end coordinate `e`. These segments collectively define the flow field and should guide the boid flock.
 
-    PLEASE NOTE THAT UNITY'S COORDINATE SYSTEM IS LEFT-HANDED, MEANING THAT THE X-AXIS IS POINTING TO THE RIGHT, THE Y-AXIS IS POINTING UP, AND THE Z-AXIS IS POINTING FORWARD.
+    IMPORTANT CONSTRAINTS:
+    1. All source points (start coordinates `s`) MUST have y=0 to match the scene's floor plane (XZ plane)
+    2. The end points (end coordinates `e`) can have any y-coordinate to create the desired flow field
+    3. The vectors should form a continuous path where the end point of one vector can serve as the start point of the next
+    4. When creating patterns (like squares, circles, etc.), they should be drawn so they start on the XZ plane (floor) with y=0.
+
+    PLEASE NOTE THAT UNITY'S COORDINATE SYSTEM IS LEFT-HANDED, MEANING THAT FROM THE PERSPECTIVE OF THE BOID FLOCK:
+    - The X-AXIS is pointing to the RIGHT
+    - The Y-AXIS is pointing UP
+    - The Z-AXIS is pointing FORWARD
+
     For example, if the user's prompt is "circle the tower aggressively", and the tower position is (5, 0, 5), the world bounds are (0, 0, 0) to (10, 10, 10), the response should be:
 
     {{
         "style": "aggressive",
         "vectors": [
             {{
-                "s": {{ "x": 3, "y": 2, "z": 3 }},
+                "s": {{ "x": 3, "y": 0, "z": 3 }},
                 "e": {{ "x": 7, "y": 2, "z": 3 }}
             }},
             {{
-                "s": {{ "x": 7, "y": 2, "z": 3 }},
+                "s": {{ "x": 7, "y": 0, "z": 3 }},
                 "e": {{ "x": 7, "y": 2, "z": 7 }}
             }},
             {{
-                "s": {{ "x": 7, "y": 2, "z": 7 }},
+                "s": {{ "x": 7, "y": 0, "z": 7 }},
                 "e": {{ "x": 3, "y": 2, "z": 7 }}
             }},
             {{
-                "s": {{ "x": 3, "y": 2, "z": 7 }},
+                "s": {{ "x": 3, "y": 0, "z": 7 }},
                 "e": {{ "x": 3, "y": 2, "z": 3 }}
             }}
         ]
     }}
 
-Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock. In this example, they form a square path around the tower. Generally, the end point `e` of one vector can serve as the start point `s` of the next to define a continuous path.
-    '''
+Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock. In this example, they form a square path around the tower on the XZ plane (floor), with some vectors pointing upward to create a dynamic flow field. Generally, the end point `e` of one vector can serve as the start point `s` of the next to define a continuous path.'''
 
 
 def construct_scene_graph_prompt(scene_graph: SceneGraph) -> str:
-    return f"These are the current objects available in the scene: {repr(scene_graph)}"
+    return f"This is the corners of the bounding box of the scene (world_bounds) followed by the current objects available in the scene(game_objects): {repr(scene_graph)}"
 
 def construct_available_styles_prompt(available_styles: list[str]) -> str:
     return f"The available styles are the following: {repr(available_styles)}"

@@ -305,4 +305,23 @@ public class BoidUIManager : MonoBehaviour
         targetFlock.hasFlow = preset.hasFlow;
         targetFlock.hasVectorField = preset.hasVectorField;
     }
+
+    // Public method to apply a style by name
+    public void ApplyStyleByName(string styleName)
+    {
+        int styleIndex = AvailableStyles.IndexOf(styleName.ToLower());
+        if (styleIndex != -1)
+        {
+            // Update the dropdown's selected value
+            if (behaviorDropdown != null)
+            {
+                behaviorDropdown.value = styleIndex;
+            }
+            OnBehaviorSelected(styleIndex);
+        }
+        else
+        {
+            Debug.LogWarning($"Style {styleName} not found in available styles!");
+        }
+    }
 } 

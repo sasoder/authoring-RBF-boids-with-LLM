@@ -13,6 +13,10 @@ class Bounds(BaseModel):
     min: Vector
     max: Vector
 
+class WorldBounds(BaseModel):
+    min: Coordinate
+    max: Coordinate
+
 class GameObject(BaseModel):
     name: str
     origin: Coordinate
@@ -20,7 +24,7 @@ class GameObject(BaseModel):
 
 
 class SceneGraph(BaseModel):
-    world_bounds: Bounds
+    world_bounds: WorldBounds
     game_objects: list[GameObject]
 
 
