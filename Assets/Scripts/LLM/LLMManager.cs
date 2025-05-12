@@ -222,7 +222,7 @@ public class LLMManager : MonoBehaviour
         Debug.Log($"Found {gameObjects.Count} objects tagged as LLMPrompt");
 
         // Find the GridRenderer directly
-        GridRenderer gridRenderer = FindObjectOfType<GridRenderer>();
+        GridRenderer gridRenderer = FindFirstObjectByType<GridRenderer>();
         if (gridRenderer == null)
         {
             Debug.LogError("Could not find GridRenderer in the scene!");

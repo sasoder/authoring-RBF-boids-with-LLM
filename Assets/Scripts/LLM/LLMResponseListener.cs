@@ -192,7 +192,7 @@ public class LLMResponseListener : MonoBehaviour
         // Handle vector replacement
         if (response.vectors != null && response.vectors.Count > 0)
         {
-            SourceVectorContainer container = FindObjectOfType<SourceVectorContainer>();
+            SourceVectorContainer container = FindFirstObjectByType<SourceVectorContainer>();
             if (container != null)
             {
                 container.ReplaceSourceVectors(response.vectors);
@@ -208,7 +208,7 @@ public class LLMResponseListener : MonoBehaviour
     void ApplyStylePreset(string styleName)
     {
         // Find and update UI elements
-        BoidUIManager uiManager = FindObjectOfType<BoidUIManager>();
+        BoidUIManager uiManager = FindFirstObjectByType<BoidUIManager>();
         if (uiManager != null)
         {
             uiManager.ApplyStyleByName(styleName);
