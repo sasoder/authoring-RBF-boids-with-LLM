@@ -39,31 +39,7 @@ def construct_prompt(request: GenerateRequest) -> str:
     - The Y-AXIS is pointing UP
     - The Z-AXIS is pointing FORWARD
 
-    For example, for a valid user prompt, the response should be:
-
-    {{
-        "style": "???",
-        "vectors": [
-            {{
-                "s": {{ "x": ..., "y": ..., "z": ... }},
-                "e": {{ "x": ..., "y": ..., "z": ... }}
-            }},
-            {{
-                "s": {{ "x": ..., "y": ..., "z": ... }},
-                "e": {{ "x": ..., "y": ..., "z": ... }}
-            }},
-            {{
-                "s": {{ "x": ..., "y": ..., "z": ... }},
-                "e": {{ "x": ..., "y": ..., "z": ... }}
-            }},
-            {{
-                "s": {{ "x": ..., "y": ..., "z": ... }},
-                "e": {{ "x": ..., "y": ..., "z": ... }}
-            }}
-        ]
-    }}
-
-Where "..." is a valid float value within the world bounds and "???" is a valid behavioural style from the available styles. Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock.'''
+Note that the vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock.'''
 
 
 def construct_scene_graph_prompt(scene_graph: SceneGraph) -> str:
