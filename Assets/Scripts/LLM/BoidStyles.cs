@@ -50,8 +50,8 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 5f,
                         minSpeed = 2f,
                         drag = 0.2f,
-                        hasFlow = false,
-                        hasVectorField = false
+                        hasFlow = true,
+                        hasVectorField = true
                     };
 
                 case "aggressive":
@@ -67,8 +67,8 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 12f,
                         minSpeed = 6f,
                         drag = 0.1f,
-                        hasFlow = false,
-                        hasVectorField = false
+                        hasFlow = true,
+                        hasVectorField = true
                     };
 
                 case "exploratory":
@@ -84,7 +84,7 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 8f,
                         minSpeed = 4f,
                         drag = 0.15f,
-                        hasFlow = false,
+                        hasFlow = true,
                         hasVectorField = true
                     };
 
@@ -101,8 +101,8 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 6f,
                         minSpeed = 4f,
                         drag = 0.1f,
-                        hasFlow = false,
-                        hasVectorField = false
+                        hasFlow = true,
+                        hasVectorField = true
                     };
 
                 case "social":
@@ -118,8 +118,8 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 6f,
                         minSpeed = 3f,
                         drag = 0.15f,
-                        hasFlow = false,
-                        hasVectorField = false
+                        hasFlow = true,
+                        hasVectorField = true
                     };
 
                 case "independent":
@@ -135,8 +135,8 @@ namespace p_bois_steering_behaviors.Scripts
                         maxSpeed = 7f,
                         minSpeed = 4f,
                         drag = 0.1f,
-                        hasFlow = false,
-                        hasVectorField = false
+                        hasFlow = true,
+                        hasVectorField = true
                     };
 
                 case "chaotic":
@@ -153,7 +153,7 @@ namespace p_bois_steering_behaviors.Scripts
                         minSpeed = 5f,
                         drag = 0.05f,
                         hasFlow = true,
-                        hasVectorField = false
+                        hasVectorField = true
                     };
 
                 default:
