@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 using System;
 using TMPro;
 using System.Text;
+using p_bois_steering_behaviors.Scripts;
 
 public class LLMManager : MonoBehaviour
 {
@@ -199,27 +200,69 @@ public class LLMManager : MonoBehaviour
 
     LLMGenerateRequestPayload CreatePayloadFromPrompt(string promptText)
     {
+        // Get all objects tagged as "LLMPrompt"
+        GameObject[] sceneObjects = GameObject.FindGameObjectsWithTag("LLMPrompt");
+        List<LLMGameObject> gameObjects = new List<LLMGameObject>();
+
+        foreach (GameObject obj in sceneObjects)
+        {
+            gameObjects.Add(new LLMGameObject 
+            { 
+                name = obj.name,
+                origin = new LLMCoordinate 
+                { 
+                    x = obj.transform.position.x,
+                    y = obj.transform.position.y,
+                    z = obj.transform.position.z
+                },
+                bounds = null // We could add bounds if needed
+            });
+        }
+
+        Debug.Log($"Found {gameObjects.Count} objects tagged as LLMPrompt");
+
+        // Find the GridRenderer directly
+        GridRenderer gridRenderer = FindObjectOfType<GridRenderer>();
+        if (gridRenderer == null)
+        {
+            Debug.LogError("Could not find GridRenderer in the scene!");
+            return null;
+        }
+
+        // Get the current bounds from GridRenderer
+        var (minPoint, maxPoint) = gridRenderer.GetGridBounds();
+        Debug.Log($"Using GridRenderer bounds: Min({minPoint}), Max({maxPoint})");
+
+        GameObject flock = GameObject.Find("FlockOfBirds");
+        if (flock == null)
+        {
+            Debug.LogError("Could not find BoidFlock in the scene!");
+            return null;
+        }
+        var randomBoid_position = flock.transform.GetChild(0).gameObject.transform.position;
+
         LLMGenerateRequestPayload payload = new LLMGenerateRequestPayload
         {
             prompt = promptText,
-            
-            // TODO: populate these with a scene graph representation of the current scene, currently just using a placeholder
-            flock_position = new LLMCoordinate { x = 0, y = 0, z = 0 },
+            flock_position = new LLMCoordinate { x = randomBoid_position.x, y = randomBoid_position.y, z = randomBoid_position.z },
             scene_graph = new LLMSceneGraph
             {
-                world_bounds = new LLMBoundsType 
+                world_bounds = new LLMWorldBoundsType
                 {
-                    min = new LLMVector { s = new LLMCoordinate { x = -10, y = -10, z = -10 }, e = new LLMCoordinate { x = -10, y = -10, z = -10 } }, 
-                    max = new LLMVector { s = new LLMCoordinate { x = 10, y = 10, z = 10 }, e = new LLMCoordinate { x = 10, y = 10, z = 10 } }  
+                    min = new LLMCoordinate { x = minPoint.x, y = minPoint.y, z = minPoint.z}, 
+                    max = new LLMCoordinate { x = maxPoint.x, y = maxPoint.y, z = maxPoint.z }
                 },
-                game_objects = new List<LLMGameObject>
-                {
-                    // example object
-                    new LLMGameObject { name = "Tower", origin = new LLMCoordinate { x = 5, y = 0, z = 5 }, bounds = null }
-                }
+                game_objects = gameObjects
             },
-            available_styles = new List<string> { "calm", "aggressive", "exploratory" } // TODO: populate with actual styles from the scene (scriptable objects @marcus)
+            available_styles = BoidUIManager.AvailableStyles
         };
+
+        // Log the payload we're sending to the server
+        string payloadJson = JsonUtility.ToJson(payload, true); // true for pretty printing
+        Debug.Log("=== Payload being sent to server ===");
+        Debug.Log(payloadJson);
+        Debug.Log("===================================");
+
         return payload;
     }
 
@@ -293,6 +336,17 @@ public class LLMManager : MonoBehaviour
                     LLMGenerationOutput llmOutput = JsonUtility.FromJson<LLMGenerationOutput>(jsonResponse);
                     if (llmOutput != null && llmOutput.vectors != null)
                     {
+                        // Create a formatted string of the response
+                        string responseLog = $"LLM Response:\nStyle: {llmOutput.style}\nVectors ({llmOutput.vectors.Count}):\n";
+                        for (int i = 0; i < llmOutput.vectors.Count; i++)
+                        {
+                            var vector = llmOutput.vectors[i];
+                            responseLog += $"Vector {i + 1}:\n";
+                            responseLog += $"  Start: ({vector.s.x}, {vector.s.y}, {vector.s.z})\n";
+                            responseLog += $"  End: ({vector.e.x}, {vector.e.y}, {vector.e.z})\n";
+                        }
+                        Debug.Log(responseLog);
+
                         OnLLMResponseReceived?.Invoke(llmOutput);
                     }
                     else

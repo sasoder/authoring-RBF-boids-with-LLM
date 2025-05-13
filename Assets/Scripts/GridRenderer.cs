@@ -200,6 +200,7 @@ public class GridRenderer : MonoBehaviour
         double[,] matrixY = new double[rows, columns];
         double[,] matrixZ = new double[rows, columns];
 
+        Debug.Log($"Computing interpolation matrices for {rows} points");
         for (int j = 0; j < rows; j++)
         {
             for (int i = 0; i < columns; i++)
@@ -295,5 +296,51 @@ public class GridRenderer : MonoBehaviour
             }
             lamdas[i] = sum / matrix[i, i];
         }
+    }
+
+    public void UpdateVectorField()
+    {
+        // Clear existing data
+        sourcePoints.Clear();
+        sourceVectors.Clear();
+        lerpVectors.Clear();
+
+        // Get new source points and vectors
+        for (int i = 0; i < sourceVectorContainer.SourcePositions.Length; i++)
+        {
+            sourcePoints.Add(sourceVectorContainer.SourcePositions[i]);
+            sourceVectors.Add(sourceVectorContainer.SourceVectors[i]);
+        }
+
+        // Recompute interpolation matrices
+        m_XLamdas = new double[sourcePoints.Count];
+        m_YLamdas = new double[sourcePoints.Count];
+        m_ZLamdas = new double[sourcePoints.Count];
+
+        ComputeInterpolationMatricesXYZ(sourcePoints, sourceVectors);
+        GaussianElimination(matrixPHIforX);
+        GaussianElimination(matrixPHIforY);
+        GaussianElimination(matrixPHIforZ);
+        ComputeLamdasVector(matrixPHIforX, m_XLamdas);
+        ComputeLamdasVector(matrixPHIforY, m_YLamdas);
+        ComputeLamdasVector(matrixPHIforZ, m_ZLamdas);
+
+        // Recompute interpolated vectors
+        foreach (Vector3 point in m_grid)
+        {
+            Vector3 interpolated = InterpolateVector(point);
+            lerpVectors.Add(interpolated);
+        }
+        
+        Debug.Log($"Vector field updated: {sourcePoints.Count} source points, {lerpVectors.Count} interpolated vectors");
+    }
+
+    // Public method to get current grid boundaries
+    public (Vector3 min, Vector3 max) GetGridBounds()
+    {
+        return (
+            new Vector3(minPoint[0], minPoint[1], minPoint[2]),
+            new Vector3(maxPoint[0], maxPoint[1], maxPoint[2])
+        );
     }
 }

@@ -3,9 +3,9 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class SourcePointAndVector : MonoBehaviour
 {
-    [SerializeField] private GameObject arrowGumble;
-    [SerializeField] private GameObject sourcePointController;
-    [SerializeField] private GameObject sourceVectorController;
+    [SerializeField] public GameObject arrowGumble;
+    [SerializeField] public GameObject sourcePointController;
+    [SerializeField] public GameObject sourceVectorController;
 
     private Vector3 _sourcePoint;
     public Vector3 SourcePoint => _sourcePoint != null ? _sourcePoint : Vector3.zero;

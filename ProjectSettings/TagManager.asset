@@ -6,6 +6,7 @@ TagManager:
   tags:
   - LLMPrompt
   - IgnoreSceneRepresentation
+  - LLMPrompt
   layers:
   - Default
   - TransparentFX
