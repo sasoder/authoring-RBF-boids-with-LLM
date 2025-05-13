@@ -24,17 +24,35 @@ public class BirdRenderer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //TODO Double check this algorithm's math
+        if (m_boid == null) return;
+
         Vector3 velocity = m_boid.Velocity;
+        Vector3 position = m_boid.Position;
+
+        // Check for invalid values
+        if (float.IsNaN(velocity.x) || float.IsNaN(velocity.y) || float.IsNaN(velocity.z) ||
+            float.IsNaN(position.x) || float.IsNaN(position.y) || float.IsNaN(position.z))
+        {
+            Debug.LogError($"Invalid position or velocity detected for {gameObject.name}. Pos: {position}, Vel: {velocity}");
+            return;
+        }
+
         if (velocity.sqrMagnitude > 0.001f)
         {
             Quaternion target = Quaternion.LookRotation(velocity, Vector3.up);
             transform.rotation = Quaternion.Lerp(transform.rotation, target, Time.deltaTime * 6);
         }
 
-        transform.position = m_boid.Position;
-        transform.position += new Vector3(0, 0, transform.parent.position.z); //inherit z-position
+        transform.position = position;
+        
+        if (transform.parent != null)
+        {
+            transform.position += new Vector3(0, 0, transform.parent.position.z); //inherit z-position
+        }
 
-        if (m_animator != null) m_animator.speed = m_wingsFlappingSpeed - (velocity.magnitude * 0.06f);
+        if (m_animator != null && !float.IsNaN(velocity.magnitude))
+        {
+            m_animator.speed = m_wingsFlappingSpeed - (velocity.magnitude * 0.06f);
+        }
     }
 }

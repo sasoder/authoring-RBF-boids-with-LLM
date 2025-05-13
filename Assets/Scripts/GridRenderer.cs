@@ -146,9 +146,21 @@ public class GridRenderer : MonoBehaviour
     }
     private void RenderPointUniformGrid()
     {
+        if (m_grid == null || lerpVectors == null || lerpVectors.Count == 0)
+        {
+            Debug.LogWarning("Grid or vectors not initialized yet");
+            return;
+        }
+
         int index = 0;
         foreach (Vector3 point in m_grid)
         {
+            if (index >= lerpVectors.Count)
+            {
+                Debug.LogWarning($"Vector index {index} out of range. Only {lerpVectors.Count} vectors available.");
+                break;
+            }
+
             Vector3 dir = lerpVectors[index];
             Vector3 direction = point + (dir * 0.2f);
             float intensity = dir.magnitude * 4.0f;

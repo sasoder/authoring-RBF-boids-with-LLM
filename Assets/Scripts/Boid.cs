@@ -36,7 +36,27 @@ public class Boid : MonoBehaviour
 
         //TODO -------- Interpolation with the Vector Field
         if (Flock.HasVectorField())
-            Acceleration += Flock.GetForceFromVectorField(this);
+        {
+            try
+            {
+                Vector3 fieldForce = Flock.GetForceFromVectorField(this);
+                if (!float.IsNaN(fieldForce.magnitude) && !float.IsInfinity(fieldForce.magnitude))
+                {
+                    // Clamp the force to prevent extreme values
+                    float maxFieldForce = 50f; // Adjust this value as needed
+                    fieldForce = Vector3.ClampMagnitude(fieldForce, maxFieldForce);
+                    Acceleration += fieldForce;
+                }
+                else
+                {
+                    Debug.LogWarning($"Invalid vector field force detected for {gameObject.name}");
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error calculating vector field force: {e.Message}");
+            }
+        }
 
         //Step simulation
         Velocity += deltaTime * Acceleration;

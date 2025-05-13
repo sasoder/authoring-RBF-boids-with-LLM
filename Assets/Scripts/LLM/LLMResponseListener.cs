@@ -196,6 +196,19 @@ public class LLMResponseListener : MonoBehaviour
             if (container != null)
             {
                 container.ReplaceSourceVectors(response.vectors);
+                
+                // Update the GridRenderer after replacing vectors
+                GridRenderer gridRenderer = FindObjectOfType<GridRenderer>();
+                if (gridRenderer != null)
+                {
+                    gridRenderer.UpdateVectorField();
+                    Debug.Log("Vector field updated after receiving new vectors");
+                }
+                else
+                {
+                    Debug.LogError("Could not find GridRenderer in scene");
+                }
+                
                 Debug.Log($"Replaced source vectors with {response.vectors.Count} new vectors");
             }
             else

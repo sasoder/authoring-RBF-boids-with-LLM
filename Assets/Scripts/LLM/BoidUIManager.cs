@@ -262,6 +262,23 @@ public class BoidUIManager : MonoBehaviour
 
     private void OnVectorFieldToggled(bool value)
     {
+        // Reset boids to safe positions/velocities before enabling vector field
+        if (value)
+        {
+            foreach (Boid boid in targetFlock.GetComponentsInChildren<Boid>())
+            {
+                // Ensure boid has valid position and velocity
+                if (float.IsNaN(boid.Position.magnitude) || float.IsInfinity(boid.Position.magnitude))
+                {
+                    boid.Position = boid.transform.position; // Reset to current transform position
+                }
+                if (float.IsNaN(boid.Velocity.magnitude) || float.IsInfinity(boid.Velocity.magnitude))
+                {
+                    boid.Velocity = Vector3.forward * targetFlock.MinSpeed; // Reset to minimum speed
+                }
+            }
+        }
+        
         targetFlock.hasVectorField = value;
     }
 
