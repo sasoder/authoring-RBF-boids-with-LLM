@@ -23,44 +23,47 @@ def construct_prompt(request: GenerateRequest) -> str:
 
     The response must be a JSON object with the following fields:
     - style: Based on the user's prompt, choose the best behavioral style from the available styles. The style must be one of the available styles.
-    - vectors: A list of directed line segments (vectors). Each segment is defined by a start coordinate `s` and an end coordinate `e`. These segments collectively define the flow field and should guide the boid flock.
+    - vectors: A list of directed line segments (vectors). Each segment is defined by a start coordinate `s` and an end coordinate `e`. These segments collectively define the flow field and should guide the boid flock towards the desired destination or along the desired path.
 
     IMPORTANT CONSTRAINTS:
-    1. All source points (start coordinates `s`) MUST have y=0 to match the scene's floor plane (XZ plane)
-    2. The end points (end coordinates `e`) can have any y-coordinate to create the desired flow field
-    3. The vectors should form a continuous path where the end point of one vector can serve as the start point of the next
-    4. When creating patterns (like squares, circles, etc.), they should be drawn so they start on the XZ plane (floor) with y=0.
+    1. The world bounds are the scene's world bounds and is defined by the min and max coordinates of the scene. The boid flock must not leave the scene's world bounds.
+    2. The game_objects field is the list of game objects in the scene. The boid flock must not collide with the game objects in the scene.
+    3. All source points (start coordinates `s`) and end points (end coordinates `e`) MUST be within the scene's world bounds.
+    4. The vectors should be placed according to the positions of the game objects in the scene and the current position of the boid flock, to ensure that the boid flock can navigate the scene effectively and towards the desired destination or along the desired path without colliding with the game objects.
+    5. There must be enough vectors to reliably guide the boid flock towards the desired destination or along the desired path. Some extra vectors can be added to ensure that the boid flock can navigate the scene effectively and towards the desired destination or along the desired path without colliding with the game objects.
+    6. You must generate at least 6 vectors that are evenly spaced out across the scene, to ensure that the flow field generated is dense and reliable.
+    7. The chosen style of the boid flock should be consistent with the user's prompt, even if the exact name of the style is not provided in the available styles the one that best matches the user's prompt should be chosen.
 
     PLEASE NOTE THAT UNITY'S COORDINATE SYSTEM IS LEFT-HANDED, MEANING THAT FROM THE PERSPECTIVE OF THE BOID FLOCK:
     - The X-AXIS is pointing to the RIGHT
     - The Y-AXIS is pointing UP
     - The Z-AXIS is pointing FORWARD
 
-    For example, if the user's prompt is "circle the tower aggressively", and the tower position is (5, 0, 5), the world bounds are (0, 0, 0) to (10, 10, 10), the response should be:
+    For example, for a valid user prompt, the response should be:
 
     {{
-        "style": "aggressive",
+        "style": "???",
         "vectors": [
             {{
-                "s": {{ "x": 3, "y": 0, "z": 3 }},
-                "e": {{ "x": 7, "y": 2, "z": 3 }}
+                "s": {{ "x": ..., "y": ..., "z": ... }},
+                "e": {{ "x": ..., "y": ..., "z": ... }}
             }},
             {{
-                "s": {{ "x": 7, "y": 0, "z": 3 }},
-                "e": {{ "x": 7, "y": 2, "z": 7 }}
+                "s": {{ "x": ..., "y": ..., "z": ... }},
+                "e": {{ "x": ..., "y": ..., "z": ... }}
             }},
             {{
-                "s": {{ "x": 7, "y": 0, "z": 7 }},
-                "e": {{ "x": 3, "y": 2, "z": 7 }}
+                "s": {{ "x": ..., "y": ..., "z": ... }},
+                "e": {{ "x": ..., "y": ..., "z": ... }}
             }},
             {{
-                "s": {{ "x": 3, "y": 0, "z": 7 }},
-                "e": {{ "x": 3, "y": 2, "z": 3 }}
+                "s": {{ "x": ..., "y": ..., "z": ... }},
+                "e": {{ "x": ..., "y": ..., "z": ... }}
             }}
         ]
     }}
 
-Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock. In this example, they form a square path around the tower on the XZ plane (floor), with some vectors pointing upward to create a dynamic flow field. Generally, the end point `e` of one vector can serve as the start point `s` of the next to define a continuous path.'''
+Where "..." is a valid float value within the world bounds and "???" is a valid behavioural style from the available styles. Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock.'''
 
 
 def construct_scene_graph_prompt(scene_graph: SceneGraph) -> str:
