@@ -6,12 +6,12 @@ You are a helpful assistant that generates a list of vectors that make up a flow
 
 
 
-def construct_prompt(request: GenerateRequest) -> str:
+def construct_llm_input_content(request: GenerateRequest) -> str:
     scene_graph_str = construct_scene_graph_prompt(request.scene_graph)
     flock_position_str = construct_flock_position_prompt(request.flock_position)
     user_prompt_str = construct_user_prompt(request.prompt)
     available_styles_str = construct_available_styles_prompt(request.available_styles)
-    return f'''{{system_prompt}}
+    return f'''
 
     {scene_graph_str}
 
