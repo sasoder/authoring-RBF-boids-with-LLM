@@ -215,7 +215,6 @@ public class LLMManager : MonoBehaviour
                     y = obj.transform.position.y,
                     z = obj.transform.position.z
                 },
-                bounds = null // We could add bounds if needed
             });
         }
 

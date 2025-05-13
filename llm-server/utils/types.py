@@ -33,7 +33,7 @@ class GenerateRequest(BaseModel):
     flock_position: Coordinate
     scene_graph: SceneGraph
     available_styles: list[str]
-    temperature: float | None = 0.5
+    temperature: float | None = 0.3
     top_k: int | None = 10
     top_p: float | None = 0.6
 

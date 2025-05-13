@@ -35,7 +35,6 @@ public class LLMGameObject
 {
     public string name;
     public LLMCoordinate origin;
-    public LLMBoundsType bounds;
 }
 
 [System.Serializable]

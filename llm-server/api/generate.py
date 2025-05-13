@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 logger.info(f"Configuring Ollama client for host: {ollama_host}")
-ollama_model_name = os.getenv("OLLAMA_MODEL", "llama3")
+ollama_model_name = os.getenv("OLLAMA_MODEL", "phi3:14b-instruct")
 ollama_client = ollama.Client(host=ollama_host)
 
 @router.post("/generate", response_model=GenerateResponse)
