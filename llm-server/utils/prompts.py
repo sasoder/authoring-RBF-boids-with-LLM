@@ -31,7 +31,7 @@ def construct_prompt(request: GenerateRequest) -> str:
     3. All source points (start coordinates `s`) and end points (end coordinates `e`) MUST be within the scene's world bounds.
     4. The vectors should be placed according to the positions of the game objects in the scene and the current position of the boid flock, to ensure that the boid flock can navigate the scene effectively and towards the desired destination or along the desired path without colliding with the game objects.
     5. There must be enough vectors to reliably guide the boid flock towards the desired destination or along the desired path. Some extra vectors can be added to ensure that the boid flock can navigate the scene effectively and towards the desired destination or along the desired path without colliding with the game objects.
-    6. You must generate at least 6 vectors that are evenly spaced out across the scene, to ensure that the flow field generated is dense and reliable.
+    6. You must generate at least 6 vectors that are evenly spaced out across the scene, to ensure that the flow field generated is dense and reliable. NONE of the vectors are ALLOWED to be equal to each other. EVERY SINGLE ONE must be unique from the rest.
     7. The chosen style of the boid flock should be consistent with the user's prompt, even if the exact name of the style is not provided in the available styles the one that best matches the user's prompt should be chosen.
 
     PLEASE NOTE THAT UNITY'S COORDINATE SYSTEM IS LEFT-HANDED, MEANING THAT FROM THE PERSPECTIVE OF THE BOID FLOCK:

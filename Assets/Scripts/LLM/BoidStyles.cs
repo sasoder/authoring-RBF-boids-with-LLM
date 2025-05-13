@@ -153,7 +153,7 @@ namespace p_bois_steering_behaviors.Scripts
                         minSpeed = 5f,
                         drag = 0.05f,
                         hasFlow = true,
-                        hasVectorField = true
+                        hasVectorField = false
                     };
 
                 default:
