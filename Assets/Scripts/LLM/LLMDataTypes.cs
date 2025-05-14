@@ -54,7 +54,8 @@ public class LLMGenerateRequestPayload
     public List<string> available_styles;
     public float temperature = 0.5f; 
     public int top_k = 10;          
-    public float top_p = 0.6f;         
+    public float top_p = 0.6f;
+    public string model_id;
 }
 
 [System.Serializable]

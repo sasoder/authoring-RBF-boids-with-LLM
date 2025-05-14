@@ -95,3 +95,5 @@ __pycache__/
 /llm-server/.venv/
 /llm-server/__pycache__/
 /llm-server/.env
+/llm-server/utils/__pycache__
+/llm-server/api/__pycache__

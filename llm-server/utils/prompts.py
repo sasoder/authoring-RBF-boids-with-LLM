@@ -5,8 +5,7 @@ You are a helpful assistant that generates a list of vectors that make up a flow
 """
 
 
-
-def construct_llm_input_content(request: GenerateRequest) -> str:
+def construct_main_prompt_content(request: GenerateRequest) -> str:
     scene_graph_str = construct_scene_graph_prompt(request.scene_graph)
     flock_position_str = construct_flock_position_prompt(request.flock_position)
     user_prompt_str = construct_user_prompt(request.prompt)
@@ -66,6 +65,12 @@ def construct_llm_input_content(request: GenerateRequest) -> str:
 Where "..." is a valid float value within the world bounds and "???" is a valid behavioural style from the available styles. Note that these vectors define directed segments. They should be thought of as force vectors or path segments that guide the boid flock.'''
 
 
+def construct_ollama_prompt(request: GenerateRequest) -> str:
+    main_content = construct_main_prompt_content(request)
+    return f"""{system_prompt}
+{main_content}"""
+
+
 def construct_scene_graph_prompt(scene_graph: SceneGraph) -> str:
     return f"This is the corners of the bounding box of the scene (world_bounds) followed by the current objects available in the scene(game_objects): {repr(scene_graph)}"
 
@@ -73,7 +78,7 @@ def construct_available_styles_prompt(available_styles: list[str]) -> str:
     return f"The available styles are the following: {repr(available_styles)}"
 
 def construct_flock_position_prompt(flock_position: Coordinate) -> str:
-    x, y, z = flock_position
+    x, y, z = flock_position.x, flock_position.y, flock_position.z # Assuming Coordinate is a Pydantic model or similar
     return f"The current position of the boid flock is x={x}, y={y}, z={z}."
 
 def construct_user_prompt(prompt: str) -> str:

@@ -20,6 +20,8 @@ public class LLMManager : MonoBehaviour
     public Button sendButton;
     public TextMeshProUGUI voiceButtonText;
 
+    public TextMeshProUGUI modelId;
+
     // --- Microphone Settings ---
     private const int RECORD_DURATION_SECONDS = 20;
     private const int SAMPLE_RATE = 16000;
@@ -254,7 +256,8 @@ public class LLMManager : MonoBehaviour
                 },
                 game_objects = gameObjects
             },
-            available_styles = BoidUIManager.AvailableStyles
+            available_styles = BoidUIManager.AvailableStyles,
+            model_id = modelId.text
         };
 
         // Log the payload we're sending to the server
