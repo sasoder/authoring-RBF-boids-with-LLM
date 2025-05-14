@@ -52,6 +52,16 @@ pip install -r requirements.txt
 # run the server
 fastapi dev main.py
 ```
+```bash
+#For Windows:
+# create a virtual environment
+py -m venv venv
+.\venv\Scripts\activate.bat
+# install dependencies - comment out uvloop from requirements.txt before
+pip install -r requirements.txt
+# run the server
+fastapi dev main.py
+```
 
 ### 4. Open the project in Unity.
 
