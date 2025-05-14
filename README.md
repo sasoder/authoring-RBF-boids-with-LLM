@@ -1,12 +1,12 @@
-# Authoring Boids using RBF interpolation - DH2323 Final project at KTH
+# Interactive Boid Authoring via LLM-Controlled RBF Flow Fields - DH2323 Final project at KTH
 
-<div style = "display: flex">
-    <img width="100%" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Images/rbf_boids_cover.jpg"/>
-<div/>
-    
 ### **Abstract**
 
-*Authoring the behavior of many virtual agents is time-consuming, involving multiple parameters and context-specific needs. Some steering algorithms use vector fields to influence agents' global paths. Jin's [JXJ*09] method stands out due to its use of Radial Basis Functions for gridless vector interpolation. This paper extends Jin's method to 3D vector fields for controlling the Boids algorithm by Reynolds (1998) and uses SteerBench test cases to evaluate this approach. Simulations showed Boids maneuvering through S shapes and shrinking to pass through narrow spaces. Implementation details and source code are available online.\*
+Simulating crowd behaviour is a longstanding challenge in computer graphics, with methods like Reynolds’ Boids and RBF flow fields providing scalable, real-time control. Recent work by [Giraldo](https://github.com/DavidGiraldoCode/p-authoring_boids_RBF_interpolation) extended RBF fields to 3D but also highlighted the lack of intuitive user control, limiting creative flexibility. This project aims to extend the work of Giraldo by building an interactive system where users direct crowd motion using natural language, enabling designers to author complex agent behaviours without tedious, manual parameter tuning.
+
+Adding to Giraldo’s Boids with RBF interpolation, we implement an LLM-driven control layer. Natural-language commands are parsed by a local LLM that responds with structured JSON directives that adjust Boid parameters and flow-field source vectors on the fly in Unity. A visual debug interface and scene-aware prompting support intuitive feedback and control.
+
+It is concluded that combining language-based input support with classic crowd simulation techniques offers a promising pathway toward more accessible and expressive tools for motion design and interactive animation. The project delivers a base for further implementation, interested parties can find the full project and assets online.
 
 # Getting Started
 
