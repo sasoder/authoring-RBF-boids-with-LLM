@@ -8,14 +8,6 @@
 
 *Authoring the behavior of many virtual agents is time-consuming, involving multiple parameters and context-specific needs. Some steering algorithms use vector fields to influence agents' global paths. Jin's [JXJ*09] method stands out due to its use of Radial Basis Functions for gridless vector interpolation. This paper extends Jin's method to 3D vector fields for controlling the Boids algorithm by Reynolds (1998) and uses SteerBench test cases to evaluate this approach. Simulations showed Boids maneuvering through S shapes and shrinking to pass through narrow spaces. Implementation details and source code are available online.\*
 
-[Video DEMO](https://youtu.be/nZEUKUlAuHc)
-
-[Full Report](https://drive.google.com/file/d/1k3AKPGAwXgeN48xWnjw-gUNlBZpsrc0d/view)
-
-You may cite this work as:
-
-Giraldo D, Authoring Boids using RBF interpolation (2024). C#. Available: https://github.com/DavidGiraldoCode/p-authoring_boids_RBF_interpolation
-
 # Getting Started
 
 Follow the steps below to run the project.
@@ -23,7 +15,8 @@ Follow the steps below to run the project.
 ## Prerequisites
 
 - [Unity 6000.0.48f1](https://unity.com)
-- [Ollama](https://ollama.com/)
+- [Ollama](https://ollama.com/) (if you want to use a locally hosted model)
+- [OpenAI API Key](https://platform.openai.com/api-keys) (if you want to use a cloud-based model)
 
 ## Installation
 
@@ -52,6 +45,7 @@ pip install -r requirements.txt
 # run the server
 fastapi dev main.py
 ```
+
 ```bash
 #For Windows:
 # create a virtual environment
@@ -75,99 +69,42 @@ This study’s implementation introduces an approach that combines Jin’s flow 
 
 ## Process and updates highlights
 
-2024 May 20
+**2025 May 14**
 
-<div style = "display: flex">
-    <img width="100%" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Images/RBF_step_by_step_boids.jpg"/>
-<div/>
-2024 May 6
-<br/>
-<div style = "display: flex">
-    <img width="320px" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Images/image.png"/>
-    <img width="320px" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Images/vf1.png"/>
-<div/>
-<br/>
-2024 April
-<br/>
-<img width="640px" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Flow_fields_test.gif"/>
+You can select which models to use for the LLM, the UI design definitely has room for improvement, but it's functional!
 
-# Radial Basis Functions (RBF)
+![LLM Demo](./media/ui.png)
 
-How do we interpolate when there is no grid? Having no sample grid is a scattered data problem for which traditional linear interpolation does not suffice. Thus, Radial Basis Functions exist as a solution for this problem by defining a function capable of interpolating any given discrete value in space, given all the values at source points.
+**2025 May 11**
 
-<div style = "display: flex">
-    <img width="50%" src="https://github.com/DavidGiraldoCode/p-bois_steering_behaviors/blob/develop/Assets/Art/Images/rbf_equations.jpg"/>
-<div/>
+We implemented the option to use cloud-based models for the LLM and have experimented with some of the newer models provided by OpenAI. The inference speed is much faster, and the quality of the generated vectors is noticably better. API delay is negligible.
 
-$$
-S(\mathbf{x}) = \sum_{i=1}^{n} \lambda_i \phi(||\mathbf{x} - \mathbf{x}_i||), \quad \mathbf{x} \in \mathbb{R}^d.
-$$
+**2025 May 10**
 
-$$
-\Phi(r) = ||\mathbf{x} - \mathbf{x}_i||
-$$
+We decided to go with a simple json scene representation for the objects ditching the bounding boxes as we overestimated the ability of the locally hosted models to generate reasonable vector fields. We're experimenting with pre-defined vector templates that the LLM can select from rather than forcing it to generate a vector field from scratch. It seems to be working well, and fits the use case a bit better. You can select which GameObjects should be included in the scene representation by giving them the `LLMPrompt` tag, which makes the prompts much more concise, and allows the developer to specify actually relevant objects. Also created a simple test environment with some of the objects tagged.
 
-```csharp
-double Phi(Vector3 vector_j, Vector3 vector_i) //RBF
-{
-    Vector3 distance = vector_j - vector_i;
-    float r = distance.magnitude;
-    double GSkernel = Math.Exp(-0.001 * Math.Pow(r, 2)); //Gaussian (GS)
-    double Skernel = r;  //Spline (S)
-    return Skernel;
-}
-```
+![LLM Demo](./media/low-poly-env.png)
 
-Relationship between source points
+**2025 May 09**
 
-```csharp
-void ComputeInterpolationMatricesXY(List<Vector3> points, List<Vector3> vectors)
-{
-    int rows = points.Count;
-    int columns = points.Count + 1;
-    double[,] matrixX = new double[rows, columns];
-    double[,] matrixY = new double[rows, columns];
+Currently, we have defined a few different underlying behaviour templates that the LLM selects from to generate a steering behaviour for the boids. We are quickly iterating on the grammar of the LLM output - the goal is to have a concise way to represent both the scene and any other important context that the LLM should take into account. Including not only the object origins, but also bounds should allow the LLM to generate fitting vectors for the boids.
 
-    for (int j = 0; j < rows; j++)
-    {
-        for (int i = 0; i < columns; i++)
-        {
-            if (i < rows)
-            {
-                matrixX[j, i] = Phi(points[j], points[i]);
-                matrixY[j, i] = Phi(points[j], points[i]);
-            }
-            else
-            {
-                matrixX[j, i] = vectors[j].x;
-                matrixY[j, i] = vectors[j].z;
-            }
-        }
-    }
+**2025 May 05**
 
-    matrixPHIforX = matrixX;
-    matrixPHIforY = matrixY;
-}
-```
+We have now implemented the style interface that controls the steering behavior of the boids! This will allow us to author different steering behaviors for the boids manually, and more easily be able to test and iterate on them.
 
-$$
-[\Phi]*[\lambda] = [f]
-$$
+![Style Interface](./media/style-interface.png)
 
-Jin (2009) presented an application of crow authoring relaying on path-planning components. They incorporated radial basis function interpolation of vector fields to guide pedestrians' flow in a grid-less setup. I am implementing and applying their paper to author the flow of a flock of boids.
+**2025 April 30**
 
-## More about crowd simulations
+Running ollama and whisper within the container itself led to some issues, so we decided to ditch the docker container and run the server locally. Initially, the docker container was meant to be an easy way to run the server without having to install the dependencies, but it ended up causing more problems than it solved. We attempted to have the container communicate with the host machine for the inference, but at that point it was easier to just run the server locally. There are easy-to-use python packages for this, so we decided to go with that.
 
-Representing multiple living entities in a virtual world is used in a number of fields, from movies and video games to urban planning and architecture. And [LBC*22] Lemori’s extensive categorization proves how committed computer graphics practitioners are to achieving plausible results. Rendering several virtual agents is known as crow simulation, a branch of computer graphics animation, and it deals with representing non-verbal behaviors of virtual beings and their relations with their environment and others, characterized by the change of their position over time [CFV*22].
+**2025 April 28**
 
-Raynolds’ Boids model is a well-known steering behavior algorithm within the crow simulation field that simulates a flock of entities in a 3D digital environment. It has set a benchmark for what a user can do in terms of simulated animal behavior. He stated three main rules: collision avoidance, velocity matching, and flock centering, concepts that then were independently defined by Raynorlds as Separation, Alignment, and Cohesion [Rey02]. There are several strategies to steer and author these boids that focus on the agent's local movement. However, as computer processing improves, game titles and movies strive for increasingly complex scenes where multiple agents interact and follow scripted behavior and paths.
+We started by implementing basic communication between Unity and the LLM server, along with transcription of audio to text. This was done by creating an `LLMManager` script set up in a prefab for easy reuse. The script is responsible for the communication with a local FastAPI server that runs in a docker container that on first run will download the whisper and ollama model specified in the .env file.
 
-Defining a virtual agent’s behavior is known as authoring simulations, a multi-layer task that enables users to achieve creative intents and satisfy application-specific characteristics [LBC*22]. Six categories encompass the aspects that can be authored in a crow simulation: Hih-level behaviors, path-planning, local movements, body animation, visualization, and post-processing [LBC*22].
-
-This paper focuses on Path-planing, which refers to authoring agents on a global scale, ideal when seeking to control large, endless crowds in complex environments not limited to a time window [LBC*22]. For global planning to happen, techniques such as Flows leverage vector fields that influence the path agents take without specifying individual paths explicitly. [LBC*22]
+![LLM Demo](./media/llm-demo.png)
 
 ## References
 
-Pulsar Bytes provided the bird mesh at the Unity Assets Store. Sound provided by SilentSeason at freesound.com.
-
-Please refer to the section: [References](https://github.com/DavidGiraldoCode/p-authoring_boids_RBF_interpolation/blob/develop/Refences.md)
+Pulsar Bytes provided the bird mesh at the Unity Assets Store. Sound provided by SilentSeason at freesound.com. Environment used is [Low Poly Environment](https://assetstore.unity.com/packages/3d/environments/low-poly-environment-315184) provided by Sky Den Games.
